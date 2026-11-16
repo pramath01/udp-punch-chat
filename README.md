@@ -1,19 +1,20 @@
 # UDP Hole-Punch Chat (with HTTP signaling)
 
 A tiny peer-to-peer terminal chat written in pure Python (standard library only). Two peers find each other's public address through a small HTTP signaling server, punch a hole through their NATs with UDP, and then chat **directly**, with no server relaying messages.
-
 ```
- Peer A ──┐                         ┌── Peer B
-          │  1. POST /join          │
-          ├────────────►  Signaling server  ◄────────────┤
-          │  2. "your peer is X"    │
-          │                                               │
-          └──────────── 3. direct UDP chat ───────────────┘
+ Peer A                   Signaling server                   Peer B
+    |                             |                             |
+    |  1. POST /join              |                             |
+    +---------------------------->+                             |
+    |                             |   1. POST /join             |
+    |                             +<----------------------------+
+    |                             |                             |
+    |  2. "your peer is B"        |   2. "your peer is A"       |
+    +<----------------------------+---------------------------->+
+    |                             |                             |
+    +<------------------ 3. direct UDP chat ------------------->+
+    |                             |                             |
 ```
-
-- `signal_server.py`: HTTP signaling server (rendezvous only; never sees chat traffic)
-- `chat_bore.py`: the chat client (STUN lookup, signaling, UDP punch, chat)
-
 ---
 
 ## Table of contents
