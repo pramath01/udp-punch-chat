@@ -5,14 +5,16 @@ Usage: python chat_bore.py <signal_host:port> <room> [name] [local_port]
 """
 import json
 import os
-import socket                                              import struct
+import socket
+import struct
 import sys
 import threading
 import time
 import urllib.request
 
 if len(sys.argv) < 3:
-    sys.exit("usage: python chat_bore.py <host:port> <room> [name] [local_port]")                                     
+    sys.exit("usage: python chat_bore.py <host:port> <room> [name] [local_port]")
+
 signal_url = "http://" + sys.argv[1]
 room = sys.argv[2]
 name = sys.argv[3] if len(sys.argv) > 3 else "peer"
