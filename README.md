@@ -111,8 +111,8 @@ python3 --version
 Either clone your repo:
 
 ```bash
-git clone https://github.com/<you>/<repo>.git
-cd <repo>
+git clone https://github.com/pramath01/udp-punch-chat.git
+cd udp-punch-chat
 ```
 
 or copy `signal_server.py` and `chat_bore.py` into `~/downloads` (or anywhere) by hand.
@@ -501,5 +501,34 @@ The address exchange happens **once, at startup**. Nothing re-discovers addresse
 | **A phone's public IP changes** (Wi-Fi ↔ mobile data, airplane mode, router reconnect, carrier re-assigns CGNAT address) | The NAT mapping is gone. Your public `ip:port` was read from STUN **only at startup**, so the client doesn't notice. The other peer sees packets from an unfamiliar IP and **ignores them** (`ignored packet from unexpected source`). The chat goes silent and does **not** recover by itself. | Press `Ctrl+C` / `/quit` on **both** peers and start them again, ideally with a fresh room name. |
 | **Only the public port changes** (same IP, new port, e.g. NAT rebinding after idle) | The receiving side prints `peer port changed ... switching` and follows the new port. | Nothing, as long as the **IP stays the same**. If both sides' ports changed at once, it may not recover; restart. |
 | **One peer restarts** | It gets a new socket and a new public port. It asks the server for a peer, but the other side stopped polling after connecting, so its entry expires after 60 seconds. The restarted peer may get a stale address or `null`, and the old peer doesn't know the new address. | Restart **both** peers together with the same room name (or a new one). |
-| **Phone sleeps or Termux is killed** | Keepalives stop (every 10 s). The NAT drops the mapping, often within 30-120 s on mobile networks. Messages stop arriving. | Use `termux-wake-loc# udp-punch-chat
-Peer-to-peer terminal chat over UDP hole punching, with a tiny HTTP signaling server. Pure Python, works on Termux.
+| **Phone sleeps or Termux is killed** | Keepalives stop (every 10 s). The NAT drops the mapping, often within 30-120 s on mobile networks. Messages stop arriving. | Use `termux-wake-lock` and set battery to Unrestricted. After a long sleep, restart both peers. |
+| **Switching apps or locking the screen for a long time** | Same as above if Android freezes Termux. | Keep Termux in the foreground or keep its notification visible. |
+
+Other consequences of the design:
+
+- **No auto-reconnect.** There is no heartbeat timeout, no retry loop after connecting, and no re-run of STUN or signaling. A dead link simply stops delivering messages and your sent messages vanish silently (UDP).
+- **No delivery feedback.** If the peer has gone away, `> ` still accepts input and you get no error.
+- **Room names are reusable but stale entries linger for 60 s.** If you restart quickly with the same room, you may be matched to your own previous (dead) address. Wait a minute or use a new room name.
+- **Peers must be started within roughly 60 seconds of each other.** The first peer keeps polling and refreshing its entry, but if it was started long ago and stopped (crashed), its entry expires.
+- **The tunnel is a single point of failure for new connections only**, since an established chat doesn't need it. If bore.pub is down or rate-limits you, nobody new can join.
+- **Mobile data IPs change often.** If one phone is on mobile data, expect to restart the pair whenever the connection hiccups.
+
+Rule of thumb: if the chat goes quiet, or either phone changes network, **restart both peers** with the current server address and a fresh room name.
+
+---
+
+## Security notes
+
+- Messages are **not encrypted or authenticated**. Anyone on the path can read them, and only the source IP is checked, so a determined attacker could spoof packets. Do not send secrets.
+- The signaling server is public if you expose it through bore.pub or similar. Anyone with the host and port can POST to it, and anyone who knows or guesses a room name can learn the other peer's address or join. Use a **long random room name**:
+  ```bash
+  python3 -c "import secrets; print(secrets.token_urlsafe(16))"
+  ```
+- The server stores only `room → {ip:port: last_seen}` in memory, discards entries after 60 seconds, and disables request logging so addresses stay out of the console.
+- Prefer your own VPS or an authenticated tunnel for anything beyond casual testing.
+
+---
+
+## License
+
+Choose a license for your repo (for example MIT) and add a `LICENSE` file.
